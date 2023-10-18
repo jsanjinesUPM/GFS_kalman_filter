@@ -3,6 +3,8 @@
 	url = git@github.com:ThrowTheSwitch/Unity.git
 [submodule "submodules/librobotcontrol"]
 	path = submodules/librobotcontrol
-	url = git@github.com:beagleboard/librobotcontrol.git
+	url = https://github.com/MateoMiguelez/librobotcontrol.git
 [submodule "submodules/librobotcontrol/"]
 	url = https://github.com/jsanjinesUPM/librobotcontrol.git
+[submodule "librobotcontrol/"]
+	url = https://github.com/MateoMiguelez/librobotcontrol.git
