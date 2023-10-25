@@ -8,6 +8,7 @@
 
 #include "unity.h"
 #include "kalman.h"
+#include "other.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,10 +66,7 @@ int main(void) {
     G.d[1][0] = -time_delta*time_delta/2;   //      [0      0]
     G.d[3][0] = -time_delta;                // G =  [-t^2/2 0]
                                             //      [0      0]
-    // R.d[0][0] = 0.05;                       //      [-t     0]
-    // R.d[0][1] = 0.5;
-    // R.d[1][1] = 0.5;
-    // R.d[1][1] = 5;
+                                            //      [-t     0]
     R.d[0][0] = 0.1;
     R.d[0][1] = 0.1;
     R.d[1][1] = 0.1;
@@ -108,10 +106,10 @@ int main(void) {
         v_pos = kf.x_pre.d[1];
         H.d[0][0] = -v_pos/((h_pos*h_pos)+(v_pos*v_pos));
         H.d[1][0] = h_pos/((h_pos*h_pos)+(v_pos*v_pos));
-        
+
         if(i % 100 == 0){
-            y.d[0] = atan2(real_v_pos, real_h_pos) + ((rand()%1000)/1000 - 0.5)*sqrt(R.d[0][0]);
-            y.d[1] = real_v_pos + ((rand()%1000)/1000 - 0.5)*sqrt(R.d[1][1]);
+            y.d[0] = atan2(real_v_pos, real_h_pos) + rc_random_normal()*sqrt(R.d[0][0]);
+            y.d[1] = real_v_pos + rc_random_normal()*sqrt(R.d[1][1]);
             if(rc_kalman_prediction_update_ekf(&kf, H, y) == -1) return -1;
 
             measured_angle = y.d[0];
@@ -124,10 +122,10 @@ int main(void) {
                                         real_h_vel, real_v_vel, measured_angle, measured_v); // Porque dos veces y.d[0]
 
         //Update Real Values
-        real_h_pos = 0 + real_h_vel*time_delta*i + ((rand()%1000)/1000 - 0.5)*sqrt(Q.d[0][0]);
-        real_v_pos = 0 + 50*time_delta*i - 9.8*0.5*time_delta*time_delta*i*i + ((rand()%1000)/1000 - 0.5)*sqrt(Q.d[1][1]);
-        real_h_vel = 30 + ((rand()%1000)/1000 - 0.5)*sqrt(Q.d[2][2]);
-        real_v_vel = 50 - 9.8*time_delta*i + ((rand()%1000)/1000 - 0.5)*sqrt(Q.d[3][3]);
+        real_h_pos = 0 + real_h_vel*time_delta*i + rc_random_normal()*sqrt(Q.d[0][0]);
+        real_v_pos = 0 + 50*time_delta*i - 9.8*0.5*time_delta*time_delta*i*i + rc_random_normal()*sqrt(Q.d[1][1]);
+        real_h_vel = 30 + rc_random_normal()*sqrt(Q.d[2][2]);
+        real_v_vel = 50 - 9.8*time_delta*i + rc_random_normal()*sqrt(Q.d[3][3]);
 
         //Reset Measurements for writing to file purposes
         measured_angle = 0;
