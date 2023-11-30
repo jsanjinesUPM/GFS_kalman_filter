@@ -39,6 +39,8 @@ int main(void) {
     rc_vector_t V   = RC_VECTOR_INITIALIZER;
     rc_matrix_t H   = RC_MATRIX_INITIALIZER;
     rc_matrix_t Q   = RC_MATRIX_INITIALIZER;
+    rc_matrix_t L   = RC_MATRIX_INITIALIZER; // Used for LL decomposition of Q
+    rc_matrix_t M   = RC_MATRIX_INITIALIZER; //Matrix for random normal data
     rc_matrix_t R   = RC_MATRIX_INITIALIZER;
     rc_matrix_t Pi  = RC_MATRIX_INITIALIZER;
     rc_vector_t y   = RC_VECTOR_INITIALIZER;
@@ -51,6 +53,8 @@ int main(void) {
     rc_matrix_zeros(&D, Nx, Nx);
     rc_matrix_zeros(&H, Ny, Nx);
     rc_matrix_zeros(&Q, Nx, Nx);
+    rc_matrix_zeros(&L, Nx, Nx);
+    rc_matrix_zeros(&M, Nx, Nx);
     rc_matrix_zeros(&R, Ny, Ny);
     rc_matrix_zeros(&Pi, Nx, Nx);
     rc_vector_zeros(&y, Ny);
@@ -78,9 +82,13 @@ int main(void) {
 
     //Manually adding noise to predicted (and real) horizontal pos and horizontal Vel
     Q.d[0][0] = 0.005;
+    Q.d[1][3] = 0.005;
     Q.d[1][1] = 0.005;
     Q.d[2][2] = 0.01;
+    Q.d[3][1] = 0.005;
     Q.d[3][3] = 0.01;
+
+    rc_ll_decomposition(Q, &L);
 
     Pi.d[0][0] = 0.1;
     Pi.d[1][1] = 0.1;
@@ -127,10 +135,12 @@ int main(void) {
                                         real_h_vel, real_v_vel);
 
         //Update Real Values
-        real_h_pos = 0 + real_h_vel*time_delta*i + rc_random_normal()*sqrt(Q.d[0][0]);
-        real_v_pos = 0 + 50*time_delta*i - 9.8*0.5*time_delta*time_delta*i*i + rc_random_normal()*sqrt(Q.d[1][1]);
-        real_h_vel = 30 + rc_random_normal()*sqrt(Q.d[2][2]);
-        real_v_vel = 60 - 9.8*time_delta*i + rc_random_normal()*sqrt(Q.d[3][3]);
+        rc_random_normal(&M);
+        rc_matrix_left_multiply_inplace(L,&M);
+        real_h_pos = 0 + real_h_vel*time_delta*i + M.d[0][0];
+        real_v_pos = 0 + 50*time_delta*i - 9.8*0.5*time_delta*time_delta*i*i + M.d[1][1];
+        real_h_vel = 30 + M.d[2][2];
+        real_v_vel = 60 - 9.8*time_delta*i + M.d[3][3];
 
         //Reset Measurements for writing to file purposes
         measured_angle = 0;
