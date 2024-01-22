@@ -157,7 +157,7 @@ int main(void) {
     x_0.d[0]= 0;
     x_0.d[1]= 0;
     x_0.d[2]= 0;
-    x_0.d[3]= 1;
+    x_0.d[3]= 0;
     x_0.d[4]= 0;
     x_0.d[5]= 0;
     x_0.d[6]= 0;
@@ -190,7 +190,7 @@ int main(void) {
             {   
                 if(i == sizeof(y.len)) break;
                 y.d[i] = strtod(token,NULL);
-                //y.d[i] += rc_random_normal()*sqrt(R.d[i][i]);
+                y.d[i] += rc_random_normal()*sqrt(R.d[i][i]);
                 token = strtok(NULL, ",");
                 i++;
             }
@@ -204,7 +204,7 @@ int main(void) {
                                              kfilter.x_pre.d[6], kfilter.x_pre.d[7],h.d[0],y.d[0],h.d[1],y.d[1]);
         //}
         //fprintf(writefile,"%f,%lf,%lf\n", time,h.d[0],y.d[0]);
-        time += 0.001;
+        time += 0.025;
     }
     // for(int extra = 0; extra < 10000; extra ++){
     //     if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;

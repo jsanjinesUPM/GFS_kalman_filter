@@ -48,8 +48,7 @@ Q = P*measurement_period/tRenovation
 for i in range(0, num_rows):
     row = ''
     for j in range(0, num_cols):
-        #M = np.random.normal(size=np.shape(Q))
-        M = np.zeros(np.shape(Q))
+        M = np.random.normal(size=np.shape(Q))
         M = M*Q
         for k_pos in range(0, num_k):
             k_mod = math.sqrt(k[k_pos][0]**2+k[k_pos][1]**2)
