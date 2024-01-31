@@ -11,6 +11,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define MAXCHAR 1024
+//#define eta_analyzer 1
+
+void write_header(FILE *writefile, double time, int x_size, int y_size){
+    //Writing header to CSV file
+    fprintf(writefile, "time,");
+    for(int i = 0; i < x_size; i++){
+        fprintf(writefile, "a%d,", i);
+    }
+    for(int i = 0; i < y_size; i++){
+        fprintf(writefile, "h%d,", i);
+        fprintf(writefile, "y%d,", i);
+    }
+    fprintf(writefile,"\n");
+    return;
+}
+
+void write_to_file(FILE *writefile, double time, rc_vector_t x, rc_vector_t h, rc_vector_t y){
+    //Writing to file
+    fprintf(writefile, "%f,", time);
+    for(int i = 0; i < x.len; i++){
+        fprintf(writefile, "%lf,", x.d[i]);
+    }
+    for(int i = 0; i < h.len; i++){
+        fprintf(writefile, "%lf,", h.d[i]);
+        fprintf(writefile, "%lf,", y.d[i]);
+    }
+    fprintf(writefile,"\n");
+    return;
+}
 
 int get_w(rc_vector_t* w, rc_matrix_t K, double depth){
     if(w->len != K.rows){
@@ -65,11 +94,18 @@ int add_H_prime(rc_matrix_t* N, rc_matrix_t H, rc_matrix_t K, rc_matrix_t X_Y, r
 
 int main(void) {
 
+    double depth = 20;
+    double time = 0;
+
+    int K_rows = 3;
+    int Num_x_y = 4;
+    int y_size = Num_x_y;
+    int x_size = K_rows*8;
+
     //Result will be written to a file
     FILE *writefile;
     writefile = fopen("wave_results.csv", "w+");
-    fprintf(writefile, "time,a1,a2,a3,a4,a5,a6,a7,a8,h0,y0,h1,y1\n"); //CSV file Header
-    //fprintf(writefile, "time,h0,y0\n"); //CSV file Header
+    write_header(writefile, time, x_size, y_size);
     
     //Data will be read from a file
     FILE *readfile;
@@ -79,14 +115,6 @@ int main(void) {
     char *token;
     int i = 0; //Will be used to iterate though CSV columns
 
-
-    double depth = 20;
-    double time = 0;
-
-    int K_rows = 1;
-    int Num_x_y = 4;
-    int y_size = Num_x_y;
-    int x_size = K_rows*8;
 
     rc_kalman_t kfilter  = RC_KALMAN_INITIALIZER;
 
@@ -135,22 +163,28 @@ int main(void) {
     rc_matrix_times_scalar(&Q, 0.025/10);
 
 
-    K.d[0][0] = 1;
-    K.d[0][1] = 0.3288;
+    K.d[0][0] = 0.707;
+    K.d[0][1] = 0.707;
 
-    // K.d[1][0] = 1;
-    // K.d[1][1] = 0.3288;
+    K.d[1][0] = 45;
+    K.d[1][1] = 107;
+
+    K.d[2][0] = 0.222;
+    K.d[2][1] = -0.056;
+
+    // K.d[3][0] = -0.707;
+    // K.d[3][1] = -0.707;
 
     X_Y.d[0][0] = 1;
     X_Y.d[0][1] = 1;
 
-    X_Y.d[1][0] = 1;
+    X_Y.d[1][0] = 2;
     X_Y.d[1][1] = 2;
 
     X_Y.d[2][0] = 2;
     X_Y.d[2][1] = 1;
 
-    X_Y.d[3][0] = 2;
+    X_Y.d[3][0] = 1;
     X_Y.d[3][1] = 2;
 
     //Give matrices inicial value
@@ -179,11 +213,14 @@ int main(void) {
 
     if(rc_kalman_new_alloc(&kfilter, F, G, H, Q, R, Pi, u, x_0)==-1) return -1;
 
-    while (fgets(row, MAXCHAR, readfile)){
+    while (1){
         if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
         get_H(&H, K, X_Y, w, time);
         rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
-        //if((int)(time*1000)%25 == 0){
+        #ifdef eta_analyzer
+        if((int)(time*1000)%25 == 0){
+        #endif
+            if(fgets(row, MAXCHAR, readfile) == NULL) break;
             token = strtok(row, ",");
             i = 0;
             while(token != NULL)
@@ -197,22 +234,32 @@ int main(void) {
 
         
             if(rc_kalman_prediction_update_ekf(&kfilter, H, y, h) == -1) return -1;
-            //Writing to file
-             fprintf(writefile,"%f,%f,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf\n",
-                                             time, kfilter.x_pre.d[0], kfilter.x_pre.d[1], kfilter.x_pre.d[2],
-                                             kfilter.x_pre.d[3], kfilter.x_pre.d[4], kfilter.x_pre.d[5], 
-                                             kfilter.x_pre.d[6], kfilter.x_pre.d[7],h.d[0],y.d[0],h.d[1],y.d[1]);
-        //}
-        //fprintf(writefile,"%f,%lf,%lf\n", time,h.d[0],y.d[0]);
+        #ifdef eta_analyzer
+        }
+        #endif
+        //Writing to file
+        write_to_file(writefile, time, kfilter.x_pre, h, y);
+        #ifdef eta_analyzer
+        time += 0.001;
+        #else
         time += 0.025;
+        #endif
     }
-    // for(int extra = 0; extra < 10000; extra ++){
-    //     if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
-    //     get_H(&H, K, X_Y, w, time);
-    //     rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
-    //     fprintf(writefile,"%f,%lf,%lf\n", time,h.d[0],y.d[0]);
-    //     time += 0.001;
-    // }
+    #ifdef eta_analyzer
+    for(int extra = 0; extra < 10000; extra ++){
+        if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
+        get_H(&H, K, X_Y, w, time);
+        rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
+        fprintf(writefile,"%f,%f,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%f,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf\n",
+                                time, kfilter.x_pre.d[0], kfilter.x_pre.d[1], kfilter.x_pre.d[2],
+                                kfilter.x_pre.d[3], kfilter.x_pre.d[4], kfilter.x_pre.d[5], 
+                                kfilter.x_pre.d[6], kfilter.x_pre.d[7],kfilter.x_pre.d[0+8], 
+                                kfilter.x_pre.d[1+8], kfilter.x_pre.d[2+8],
+                                kfilter.x_pre.d[3+8], kfilter.x_pre.d[4+8], kfilter.x_pre.d[5+8], 
+                                kfilter.x_pre.d[6+8], kfilter.x_pre.d[7+8],h.d[0],y.d[0],h.d[1],y.d[1]);
+        time += 0.001;
+    }
+    #endif
 
     fclose(writefile);
     fclose(readfile);
