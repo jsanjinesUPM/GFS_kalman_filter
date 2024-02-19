@@ -10,8 +10,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #define MAXCHAR 1024
 //#define eta_analyzer 1
+
 
 void write_header(FILE *writefile, double time, int x_size, int y_size){
     //Writing header to CSV file
@@ -39,6 +41,46 @@ void write_to_file(FILE *writefile, double time, rc_vector_t x, rc_vector_t h, r
     }
     fprintf(writefile,"\n");
     return;
+}
+
+int mesh_size(const char* meshfile_path){
+    //Data will be read from a file
+    FILE *meshfile;
+    // readfile = fopen("../amp_0-2_t_2_3-5.csv", "r+");
+    meshfile = fopen(meshfile_path, "r+");
+    char row[MAXCHAR];
+    int lines = 0;
+    while(1){
+        if(fgets(row, MAXCHAR, meshfile) == NULL) break;
+        lines++;
+    }
+    fclose(meshfile);
+    return lines;
+}
+
+void load_mesh(rc_matrix_t* K, const char* meshfile_path){
+    //Data will be read from a file
+    FILE *meshfile;
+    // readfile = fopen("../amp_0-2_t_2_3-5.csv", "r+");
+    meshfile = fopen(meshfile_path, "r+");
+    char row[MAXCHAR];
+    char *token;
+    int column = 0; //Will be used to iterate though CSV columns
+    int row_number = 0;
+    while(1){
+        if(fgets(row, MAXCHAR, meshfile) == NULL) break;
+        token = strtok(row, ",");
+        column = 0;
+        while(token != NULL)
+        {   
+            if(column == sizeof(K->cols)) break;
+            K->d[row_number][column] = strtod(token,NULL);
+            token = strtok(NULL, ",");
+            column++;
+        }
+        row_number++;
+    }
+    fclose(meshfile);
 }
 
 int get_w(rc_vector_t* w, rc_matrix_t K, double depth){
@@ -94,10 +136,12 @@ int add_H_prime(rc_matrix_t* N, rc_matrix_t H, rc_matrix_t K, rc_matrix_t X_Y, r
 
 int main(void) {
 
+    const char meshfile_path[] = "../mesh.csv";
+
     double depth = 20;
     double time = 0;
 
-    int K_rows = 3;
+    int K_rows = mesh_size(meshfile_path);
     int Num_x_y = 4;
     int y_size = Num_x_y;
     int x_size = K_rows*8;
@@ -162,18 +206,8 @@ int main(void) {
     rc_matrix_identity(&Q, Q.cols);
     rc_matrix_times_scalar(&Q, 0.025/10);
 
+    load_mesh(&K, meshfile_path);
 
-    K.d[0][0] = 0.707;
-    K.d[0][1] = 0.707;
-
-    K.d[1][0] = 45;
-    K.d[1][1] = 107;
-
-    K.d[2][0] = 0.222;
-    K.d[2][1] = -0.056;
-
-    // K.d[3][0] = -0.707;
-    // K.d[3][1] = -0.707;
 
     X_Y.d[0][0] = 1;
     X_Y.d[0][1] = 1;
@@ -187,25 +221,6 @@ int main(void) {
     X_Y.d[3][0] = 1;
     X_Y.d[3][1] = 2;
 
-    //Give matrices inicial value
-    x_0.d[0]= 0;
-    x_0.d[1]= 0;
-    x_0.d[2]= 0;
-    x_0.d[3]= 0;
-    x_0.d[4]= 0;
-    x_0.d[5]= 0;
-    x_0.d[6]= 0;
-    x_0.d[7]= 0;
-
-    // x_0.d[8*1+0]= 0;
-    // x_0.d[8*1+1]= 0;
-    // x_0.d[8*1+2]= 0;
-    // x_0.d[8*1+3]= 0;
-    // x_0.d[8*1+4]= 0;
-    // x_0.d[8*1+5]= 0;
-    // x_0.d[8*1+6]= 0;
-    // x_0.d[8*1+7]= 0;
-
 
     get_w(&w,K, depth);
     get_H(&H, K, X_Y, w, time);
@@ -214,9 +229,11 @@ int main(void) {
     if(rc_kalman_new_alloc(&kfilter, F, G, H, Q, R, Pi, u, x_0)==-1) return -1;
 
     while (1){
+        clock_t begin_predict = clock();
         if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
         get_H(&H, K, X_Y, w, time);
         rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
+        clock_t end_predict = clock();
         #ifdef eta_analyzer
         if((int)(time*1000)%25 == 0){
         #endif
@@ -231,9 +248,23 @@ int main(void) {
                 token = strtok(NULL, ",");
                 i++;
             }
+            i = 0;
+            while(token != NULL)
+            {   
+                if(i == sizeof(y.len)) break;
+                X_Y.d[i][0] = strtod(token,NULL);
+                token = strtok(NULL, ",");
+                X_Y.d[i][1] = strtod(token,NULL);
+                i++;
+            }
 
-        
+        clock_t begin_update = clock();
             if(rc_kalman_prediction_update_ekf(&kfilter, H, y, h) == -1) return -1;
+        clock_t end_update = clock();
+        double time_predict = (double)(end_predict - begin_predict) / CLOCKS_PER_SEC;
+        double time_update = (double)(end_update - begin_update)/ CLOCKS_PER_SEC;
+        // printf("Time per iteration predict: %lf \n", time_predict);
+        // printf("Time per iteration update: %lf \n \n", time_update);
         #ifdef eta_analyzer
         }
         #endif
@@ -250,13 +281,7 @@ int main(void) {
         if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
         get_H(&H, K, X_Y, w, time);
         rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
-        fprintf(writefile,"%f,%f,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%f,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf\n",
-                                time, kfilter.x_pre.d[0], kfilter.x_pre.d[1], kfilter.x_pre.d[2],
-                                kfilter.x_pre.d[3], kfilter.x_pre.d[4], kfilter.x_pre.d[5], 
-                                kfilter.x_pre.d[6], kfilter.x_pre.d[7],kfilter.x_pre.d[0+8], 
-                                kfilter.x_pre.d[1+8], kfilter.x_pre.d[2+8],
-                                kfilter.x_pre.d[3+8], kfilter.x_pre.d[4+8], kfilter.x_pre.d[5+8], 
-                                kfilter.x_pre.d[6+8], kfilter.x_pre.d[7+8],h.d[0],y.d[0],h.d[1],y.d[1]);
+        write_to_file(writefile, time, kfilter.x_pre, h, y);
         time += 0.001;
     }
     #endif
