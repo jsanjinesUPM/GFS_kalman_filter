@@ -142,7 +142,7 @@ int main(void) {
     double time = 0;
 
     int K_rows = mesh_size(meshfile_path);
-    int Num_x_y = 4;
+    int Num_x_y = 9;
     int y_size = Num_x_y;
     int x_size = K_rows*8;
 
@@ -221,6 +221,21 @@ int main(void) {
     X_Y.d[3][0] = 1;
     X_Y.d[3][1] = 2;
 
+    X_Y.d[4][0] = 1;
+    X_Y.d[4][1] = 3;
+
+    X_Y.d[5][0] = 2;
+    X_Y.d[5][1] = 3;
+
+    X_Y.d[6][0] = 3;
+    X_Y.d[6][1] = 3;
+
+    X_Y.d[7][0] = 3;
+    X_Y.d[7][1] = 1;
+
+    X_Y.d[8][0] = 3;
+    X_Y.d[8][1] = 2;
+
 
     get_w(&w,K, depth);
     get_H(&H, K, X_Y, w, time);
@@ -255,6 +270,7 @@ int main(void) {
                 X_Y.d[i][0] = strtod(token,NULL);
                 token = strtok(NULL, ",");
                 X_Y.d[i][1] = strtod(token,NULL);
+                token = strtok(NULL, ",");
                 i++;
             }
 

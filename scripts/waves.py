@@ -82,9 +82,9 @@ k = np.array([[0.7969557584733965, 0.06972459419812653]])
 print("module: "+ str(module))
 print("angle: "+ str(angle*180/math.pi))
 ###########################
-x_y_0 = np.array([[1,1],[2,2],[2,1],[1,2]])
+x_y_0 = np.array([[1,1],[2,2],[2,1],[1,2],[1,3],[2,3],[3,3],[3,1],[3,2]])
 x_y = np.zeros(np.shape(x_y_0))
-x_boat_speed = 0 #in m/s
+x_boat_speed = 0 #in m/s X SPEED IS NOW TIME DEPENDANT AND IS DEFINED IN THE MAIN FOR LOOP
 y_boat_speed = 0 #in m/s
 
 ###### Amplitudes ######

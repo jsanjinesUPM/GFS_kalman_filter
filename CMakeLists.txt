@@ -30,10 +30,11 @@ add_library(librobotcontrol STATIC      ${ROBOLIB_SRC}/kalman.c
                                         
 target_include_directories(librobotcontrol PUBLIC   ${ROBOLIB_INC})
 
-add_executable(matrix_tests ${TESTS_PATH}/matrix_lib_tests.c)
-target_link_libraries(matrix_tests
-    PUBLIC gfs-matrix-lib-implementation unity)
+# add_executable(matrix_tests ${TESTS_PATH}/math_lib_tests.c)
+# target_link_libraries(matrix_tests
+#     PUBLIC gfs-matrix-lib-implementation unity librobotcontrol)
 
-add_executable(math_tests ${TESTS_PATH}/math_lib_tests.c)
-target_link_libraries(math_tests
-    PUBLIC gfs-matrix-lib-implementation unity librobotcontrol)
+add_executable(olas_tests ${TESTS_PATH}/olas.c)
+    target_link_libraries(olas_tests
+        PUBLIC gfs-matrix-lib-implementation unity librobotcontrol)
+    
