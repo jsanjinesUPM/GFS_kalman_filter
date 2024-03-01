@@ -43,13 +43,21 @@ def get_vz(t,x,y,k_1,k_2, k_mod, w, a, g, h, z):
 
 
 df_real_vel = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/velocity_data.csv', skip_blank_lines=True, header=0)
-df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
+##df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
+df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/amplitud_data.csv', skip_blank_lines=True, header=0)
+
 sensors = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/sensors.csv', skip_blank_lines=True, header=None)
-times = df_kalman_amplitudes['time'].tolist()
+##times = df_kalman_amplitudes['time'].tolist()
 a0 = df_kalman_amplitudes.columns.get_loc('a0')
+
+##### DEBUG
+df = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
+times = df['time'].tolist()
+######
+
 vx_sensor1 = df_real_vel.columns.get_loc('vxSensor1')
 
-mesh = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/mesh.csv', skip_blank_lines=True)
+mesh = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/mesh.csv', skip_blank_lines=True, header=None)
 k= mesh.to_numpy()
 
 g = 9.8
@@ -64,6 +72,7 @@ vx = np.zeros((num_rows,num_sensors))
 vy = np.zeros((num_rows,num_sensors))
 vz = np.zeros((num_rows,num_sensors))
 
+
 for i in range(0, num_rows):
     for j in range(0, num_sensors):
         for k_pos in range(0, num_k):
@@ -71,10 +80,10 @@ for i in range(0, num_rows):
             ky = k[k_pos][1]
             k_mod = math.sqrt(kx**2+ky**2)
             w = math.sqrt(g*k_mod*math.tanh(k_mod*h))
-            start_time = time.time()
 
             x = sensors.iloc[i,j*2+0]
             y = sensors.iloc[i,j*2+1]
+
             a = df_kalman_amplitudes.iloc[i,k_pos*8+a0:k_pos*8+8+a0].tolist()
 
             vx[i][j] += get_vx(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)

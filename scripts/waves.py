@@ -70,7 +70,7 @@ def get_vz(t,x,y,k_1,k_2, k_mod, w, a, g, h, z):
 
 measurement_period = 0.025
 tRenovation = 10
-time = np.arange(0,20,0.025)
+time = np.arange(0,10,0.025)
 g = 9.8
 h = 20
 z = -0.6
@@ -82,7 +82,7 @@ k = np.array([[0.7969557584733965, 0.06972459419812653]])
 print("module: "+ str(module))
 print("angle: "+ str(angle*180/math.pi))
 ###########################
-x_y_0 = np.array([[1,1],[2,2],[2,1],[1,2],[1,3],[2,3],[3,3],[3,1],[3,2]])
+x_y_0 = np.array([[1,1],[2,2],[2,1],[1,2],[1,3],[2,3],[3,3],[3,2],[3,1]])
 x_y = np.zeros(np.shape(x_y_0))
 x_boat_speed = 0 #in m/s X SPEED IS NOW TIME DEPENDANT AND IS DEFINED IN THE MAIN FOR LOOP
 y_boat_speed = 0 #in m/s
@@ -101,7 +101,7 @@ vz = np.zeros((num_rows,num_cols))
 
 ##### Noise Matrix ########
 P = np.identity(num_k*8)
-Q = P*measurement_period/tRenovation
+Q = P*0#P*measurement_period/tRenovation
 
 for i in range(0, num_rows):
     row = ''
@@ -111,14 +111,16 @@ for i in range(0, num_rows):
         M = np.random.normal(size=np.shape(Q))
         M = M*Q
         for k_pos in range(0, num_k):
-            k_mod = math.sqrt(k[k_pos][0]**2+k[k_pos][1]**2)
+            kx = k[k_pos][0]
+            ky = k[k_pos][1]
+            k_mod = math.sqrt(kx**2+ky**2)
             w = math.sqrt(g*k_mod*math.tanh(k_mod*h))
             for m in range(0,np.shape(Q)[0]):
                 a[m] = a[m] + M[m][m]
             x_y[j][0] = x_y_0[j][0] + x_boat_speed * time[i]
             x_y[j][1] = x_y_0[j][1] + y_boat_speed * time[i]
             y[i][j] += get_eta(time[i],x_y[j][0],x_y[j][1],k[k_pos][0],k[k_pos][1],w, a[k_pos*8:k_pos*8+8])
-            vx[i][j] += get_vx(time[i],x_y[j][0],x_y[j][1],k[k_pos][0],k[k_pos][1],k_mod, w, a[k_pos*8:k_pos*8+8], g, h, z)
+            vx[i][j] += get_vx(time[i],x_y[j][0],x_y[j][1],kx,ky,k_mod, w, a[k_pos*8:k_pos*8+8], g, h, z)
             vy[i][j] += get_vy(time[i],x_y[j][0],x_y[j][1],k[k_pos][0],k[k_pos][1],k_mod, w, a[k_pos*8:k_pos*8+8], g, h, z)
             vz[i][j] += get_vz(time[i],x_y[j][0],x_y[j][1],k[k_pos][0],k[k_pos][1],k_mod, w, a[k_pos*8:k_pos*8+8], g, h, z)
             row = row + str(y[i][j])+','

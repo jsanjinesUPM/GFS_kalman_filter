@@ -73,7 +73,7 @@ void load_mesh(rc_matrix_t* K, const char* meshfile_path){
         column = 0;
         while(token != NULL)
         {   
-            if(column == sizeof(K->cols)) break;
+            if(column == K->cols) break;
             K->d[row_number][column] = strtod(token,NULL);
             token = strtok(NULL, ",");
             column++;
@@ -91,7 +91,7 @@ int get_w(rc_vector_t* w, rc_matrix_t K, double depth){
     double g = 9.8;
     for(int i = 0; i < w->len; i++){
         k_norm = sqrt(K.d[i][0]*K.d[i][0] + K.d[i][1]*K.d[i][1]);
-        w->d[i] = sqrt(g*k_norm* tanh(k_norm*depth));
+        w->d[i] = sqrt(g*k_norm*tanh(k_norm*depth));
     }
     return 0;
 }
@@ -208,7 +208,6 @@ int main(void) {
 
     load_mesh(&K, meshfile_path);
 
-
     X_Y.d[0][0] = 1;
     X_Y.d[0][1] = 1;
 
@@ -231,10 +230,10 @@ int main(void) {
     X_Y.d[6][1] = 3;
 
     X_Y.d[7][0] = 3;
-    X_Y.d[7][1] = 1;
+    X_Y.d[7][1] = 2;
 
     X_Y.d[8][0] = 3;
-    X_Y.d[8][1] = 2;
+    X_Y.d[8][1] = 1;
 
 
     get_w(&w,K, depth);
@@ -246,8 +245,10 @@ int main(void) {
     while (1){
         clock_t begin_predict = clock();
         if(rc_kalman_predict_simple(&kfilter, F) == -1) return -1;
-        get_H(&H, K, X_Y, w, time);
-        rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
+        #ifdef eta_analyzer
+            get_H(&H, K, X_Y, w, time);
+            rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
+        #endif
         clock_t end_predict = clock();
         #ifdef eta_analyzer
         if((int)(time*1000)%25 == 0){
@@ -257,7 +258,7 @@ int main(void) {
             i = 0;
             while(token != NULL)
             {   
-                if(i == sizeof(y.len)) break;
+                if(i == y.len) break;
                 y.d[i] = strtod(token,NULL);
                 y.d[i] += rc_random_normal()*sqrt(R.d[i][i]);
                 token = strtok(NULL, ",");
@@ -266,19 +267,20 @@ int main(void) {
             i = 0;
             while(token != NULL)
             {   
-                if(i == sizeof(y.len)) break;
+                if(i == y.len) break;
                 X_Y.d[i][0] = strtod(token,NULL);
                 token = strtok(NULL, ",");
                 X_Y.d[i][1] = strtod(token,NULL);
                 token = strtok(NULL, ",");
                 i++;
             }
-
-        clock_t begin_update = clock();
+            get_H(&H, K, X_Y, w, time);
+            rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
+            clock_t begin_update = clock();
             if(rc_kalman_prediction_update_ekf(&kfilter, H, y, h) == -1) return -1;
-        clock_t end_update = clock();
-        double time_predict = (double)(end_predict - begin_predict) / CLOCKS_PER_SEC;
-        double time_update = (double)(end_update - begin_update)/ CLOCKS_PER_SEC;
+            clock_t end_update = clock();
+            double time_predict = (double)(end_predict - begin_predict) / CLOCKS_PER_SEC;
+            double time_update = (double)(end_update - begin_update)/ CLOCKS_PER_SEC;
         // printf("Time per iteration predict: %lf \n", time_predict);
         // printf("Time per iteration update: %lf \n \n", time_update);
         #ifdef eta_analyzer
