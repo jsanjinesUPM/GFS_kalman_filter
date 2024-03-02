@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import math
 import csv
 import time
+from waves import g,h,z
+from waves import k as k_sim
 
 def get_vx(t,x,y,k_1,k_2, k_mod, w, a, g, h, z):
     S = k_1*g*math.cosh(k_mod*(h+z))/(w*math.cosh(k_mod*h))
@@ -42,64 +44,72 @@ def get_vz(t,x,y,k_1,k_2, k_mod, w, a, g, h, z):
     return S*v
 
 
-df_real_vel = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/velocity_data.csv', skip_blank_lines=True, header=0)
-##df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
-df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/amplitud_data.csv', skip_blank_lines=True, header=0)
+df_kalman_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
+df_sim_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/amplitud_data.csv', skip_blank_lines=True, header=0)
 
-sensors = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/sensors.csv', skip_blank_lines=True, header=None)
-##times = df_kalman_amplitudes['time'].tolist()
+points = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/measuring_point.csv', skip_blank_lines=True, header=None)
+times = df_kalman_amplitudes['time'].tolist()
 a0 = df_kalman_amplitudes.columns.get_loc('a0')
-
-##### DEBUG
-df = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
-times = df['time'].tolist()
-######
-
-vx_sensor1 = df_real_vel.columns.get_loc('vxSensor1')
+sim_a0 = df_sim_amplitudes.columns.get_loc('a0')
 
 mesh = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/mesh.csv', skip_blank_lines=True, header=None)
-k= mesh.to_numpy()
+mesh = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/mesh.csv', skip_blank_lines=True, header=None)
+k_mesh= mesh.to_numpy()
 
-g = 9.8
-h = 20
-z = -0.6
-
-num_sensors = int(len(sensors.columns)/2)
-num_k = np.shape(k)[0]
+num_points = int(len(points.columns)/2)
+num_k = np.shape(k_mesh)[0]
+num_sim_k = np.shape(k_sim)[0]
 num_rows = len(df_kalman_amplitudes)
 
-vx = np.zeros((num_rows,num_sensors))
-vy = np.zeros((num_rows,num_sensors))
-vz = np.zeros((num_rows,num_sensors))
+vx = np.zeros((num_rows,num_points))
+vy = np.zeros((num_rows,num_points))
+vz = np.zeros((num_rows,num_points))
+vx_sim = np.zeros((num_rows,num_points))
+vy_sim = np.zeros((num_rows,num_points))
+vz_sim = np.zeros((num_rows,num_points))
 
 
 for i in range(0, num_rows):
-    for j in range(0, num_sensors):
+    for j in range(0, num_points):
         for k_pos in range(0, num_k):
-            kx = k[k_pos][0]
-            ky = k[k_pos][1]
+            kx = k_mesh[k_pos][0]
+            ky = k_mesh[k_pos][1]
             k_mod = math.sqrt(kx**2+ky**2)
             w = math.sqrt(g*k_mod*math.tanh(k_mod*h))
 
-            x = sensors.iloc[i,j*2+0]
-            y = sensors.iloc[i,j*2+1]
+            x = points.iloc[i,j*2+0]
+            y = points.iloc[i,j*2+1]
 
             a = df_kalman_amplitudes.iloc[i,k_pos*8+a0:k_pos*8+8+a0].tolist()
 
             vx[i][j] += get_vx(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
             vy[i][j] += get_vy(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
             vz[i][j] += get_vz(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
+        for k_pos in range(0, num_sim_k):
+            kx = k_sim[k_pos][0]
+            ky = k_sim[k_pos][1]
+            k_mod = math.sqrt(kx**2+ky**2)
+            w = math.sqrt(g*k_mod*math.tanh(k_mod*h))
+
+            x = points.iloc[i,j*2+0]
+            y = points.iloc[i,j*2+1]
+
+            a = df_sim_amplitudes.iloc[i,k_pos*8+sim_a0:k_pos*8+8+sim_a0].tolist()
+
+            vx_sim[i][j] += get_vx(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
+            vy_sim[i][j] += get_vy(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
+            vz_sim[i][j] += get_vz(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
 
 fig, ax = plt.subplots(2,1)
 ax[0].plot(times, vx[:,0], color='green', label='Kalman')
-ax[0].plot(times, df_real_vel.iloc[:,vx_sensor1], color='red', label='Real')
+ax[0].plot(times, vx_sim[:,0], color='red', label='Real')
 ax[0].legend(loc='best')
 ax[0].set_xlabel('t[s]')
 ax[0].set_ylabel('v[m/s]')
 ax[0].set_title('Kalman Wave Speed vs Real Wave Speed')
 
 
-ax[1].plot(times, abs(df_real_vel.iloc[:,vx_sensor1]-vx[:,0]), color='Blue')
+ax[1].plot(times, abs(vx_sim[:,0]-vx[:,0]), color='Blue')
 ax[1].set_xlabel('t[s]')
 ax[1].set_ylabel('Error[m/s]')
 ax[1].set_title('Speed Absolute Error')
