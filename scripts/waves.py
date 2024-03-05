@@ -7,7 +7,7 @@ import random
 g = 9.8
 h = 20
 z = -0.6
-k = np.array([[2.59, 1.5]]) #Careful when using random K this will be overwritten
+k = np.array([[0.79, 0.069]]) #Careful when using random K this will be overwritten
 
 if __name__ == '__main__':
     file =  open('wave_data.csv', 'w', newline='')
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     ##### Noise Matrix ########
     P = np.identity(num_k*8)
-    Q = P*0#P*measurement_period/tRenovation
+    Q = P*measurement_period/tRenovation
 
     for i in range(0, num_rows):
         row = ''
