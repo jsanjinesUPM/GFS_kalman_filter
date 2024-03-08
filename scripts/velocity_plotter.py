@@ -100,16 +100,25 @@ for i in range(0, num_rows):
             vy_sim[i][j] += get_vy(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
             vz_sim[i][j] += get_vz(times[i],x,y,kx,ky,k_mod, w, a, g, h, z)
 
+#Lets calculate velocities parallel and perpendicular to the boats' heading
+heading = math.atan((points.iloc[1,1]-points.iloc[0,1])/(points.iloc[1,0]-points.iloc[0,0]))
+v_parallel = math.cos(heading)*vx + math.sin(heading)*vy
+v_parallel_sim = math.cos(heading)*vx_sim + math.sin(heading)*vy_sim
+
+v_perpendicular = -math.sin(heading)*vx + math.cos(heading)*vy
+v_perpendicular = -math.sin(heading)*vx + math.cos(heading)*vy
+
+
 fig, ax = plt.subplots(2,1)
-ax[0].plot(times, vx[:,0], color='green', label='Kalman')
-ax[0].plot(times, vx_sim[:,0], color='red', label='Real')
+ax[0].plot(times, v_parallel[:,0], color='green', label='Kalman')
+ax[0].plot(times, v_parallel_sim[:,0], color='red', label='Real')
 ax[0].legend(loc='best')
 ax[0].set_xlabel('t[s]')
 ax[0].set_ylabel('v[m/s]')
 ax[0].set_title('Kalman Wave Speed vs Real Wave Speed')
 
 
-ax[1].plot(times, abs(vx_sim[:,0]-vx[:,0]), color='Blue')
+ax[1].plot(times, abs(v_parallel_sim[:,0]-v_parallel[:,0]), color='Blue')
 ax[1].set_xlabel('t[s]')
 ax[1].set_ylabel('Error[m/s]')
 ax[1].set_title('Speed Absolute Error')
