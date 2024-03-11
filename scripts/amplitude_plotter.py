@@ -6,7 +6,7 @@ import numpy as np
 df_kalman = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/build/wave_results.csv', skip_blank_lines=True, header=0)
 df_amplitudes = pd.read_csv('c:/Users/mateo/GFS_kalman_filter/amplitud_data.csv', skip_blank_lines=True, header=0)
 
-manual_filter_k_num = 2
+manual_filter_k_num = 10
 k_num = max(int(df_amplitudes.shape[1]/8), manual_filter_k_num) #number of columns in dataframe/8
 for k in range(0,k_num):
     fig, ax = plt.subplots(2,4)
@@ -16,8 +16,9 @@ for k in range(0,k_num):
                 ax[i,j].plot(df_kalman['time'], df_kalman.iloc[:,8*k+i*4+j+1], color='green')
             except:
                 print("kalman values went wrong")
+            
             try:
-                ax[i,j].plot(df_kalman['time'], df_amplitudes.iloc[:,8*k+i*4+j], color='red')
+                ax[i,j].plot(df_kalman['time'], df_amplitudes.iloc[:,8*0+i*4+j], color='red')
             except:
                 print("Wave data went wrong")
             ax[i,j].set_xlabel('t[s]')

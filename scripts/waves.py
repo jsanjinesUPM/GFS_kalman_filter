@@ -7,7 +7,14 @@ import random
 g = 9.8
 h = 20
 z = -0.6
-k = np.array([[0.7969557584733965, 0.06972459419812653]]) #Careful when using random K this will be overwritten
+#k = np.array([[0.7969557584733965, 0.06972459419812653]]) #Careful when using random K this will be overwritten
+####Generating Random K####
+angle = random.randint(50,50)*math.pi/(10*180)
+module = 4.396#random.randint(400,5000)*2/1000
+k = np.array([[module*math.cos(angle),module*math.sin(angle)]])
+print("module: "+ str(module))
+print("angle: "+ str(angle*180/math.pi))
+###########################
 
 if __name__ == '__main__':
     file =  open('wave_data.csv', 'w', newline='')
@@ -19,6 +26,8 @@ if __name__ == '__main__':
 
     sensors_file = open('sensors.csv', 'w', newline='')
     points_file = open('measuring_point.csv', 'w', newline='')
+
+    z_file = open('z_pos.csv', 'w', newline='')
 
 
     def get_eta(t,x,y,k_1,k_2,w, a):
@@ -36,18 +45,17 @@ if __name__ == '__main__':
     tRenovation = 10
     time = np.arange(0,10,0.025)
 
-    ####Generating Random K####
-    angle = random.randint(0,900)*math.pi/(10*180)
-    module = random.randint(400,2500)*2/1000
-    #k = np.array([[module*math.cos(angle),module*math.sin(angle)]])
-    print("module: "+ str(module))
-    print("angle: "+ str(angle*180/math.pi))
-    ###########################
     x_y_0 = np.array([[1,1],[2,2],[2,1],[1,2],])#[1,3],[2,3],[3,3],[3,2],[3,1]])
     x_y = np.zeros(np.shape(x_y_0), float)
     measure_point = np.array([[0.5,0.5]], float)
     x_boat_speed = 8 #in m/s X iS NOW TIME DEPENDANT
     y_boat_speed = 8 #in m/s
+
+    ##Constants for boat movement
+    modulation_idx = 0.3
+    modulation_freq = 2*math.pi*0.1
+    carrier_freq = 2*math.pi*0.01
+    
 
     ###### Amplitudes ######
     a = np.array([0,0,0,2,0,2,0,0,], dtype=float)
@@ -56,8 +64,9 @@ if __name__ == '__main__':
     num_rows = np.shape(time)[0]
     num_cols = np.shape(x_y)[0]
     num_k = np.shape(k)[0]
-    y = np.zeros((num_rows,num_cols))
-
+    y = np.zeros((num_rows,num_cols), float)
+    z_boat_pos = np.zeros((num_rows), float)
+    acceleration = np.zeros((num_rows), float)
     ##### Noise Matrix ########
     P = np.identity(num_k*8)
     Q = P*measurement_period/tRenovation
@@ -66,6 +75,12 @@ if __name__ == '__main__':
         row = ''
         sensors_row = ''
         points_row = ''
+
+        z_boat_pos[i] = (1+modulation_idx*math.cos(modulation_freq*time[i]))*math.cos(carrier_freq*time[i])
+        acceleration[i] = -modulation_idx*(modulation_freq**2 + carrier_freq**2)*math.cos(modulation_freq*time[i])*math.cos(carrier_freq*time[i])
+        acceleration[i] += -(carrier_freq**2)*math.cos(carrier_freq*time[i])
+        acceleration[i] += -2*modulation_idx*modulation_freq*carrier_freq*math.sin(carrier_freq*time[i])*math.sin(modulation_freq*time[i])
+        
         for j in range(0, num_cols):
             M = np.random.normal(size=np.shape(Q))
             M = M*Q
@@ -83,15 +98,17 @@ if __name__ == '__main__':
                     measure_point[j][1] = measure_point[j][1] + y_boat_speed * time[i] #+ math.sin(2*math.pi*0.3*time[i])*math.cos(math.atan(y_boat_speed/x_boat_speed))
                     points_row = points_row + str(measure_point[j][0])+',' + str(measure_point[j][1])+','
                 y[i][j] += get_eta(time[i],x_y[j][0],x_y[j][1],kx,ky,w, a[k_pos*8:k_pos*8+8])
-                row = row + str(y[i][j])+','
+                row = row + str(z_boat_pos[i] - y[i][j])+','
                 sensors_row = sensors_row + str(x_y[j][0])+',' + str(x_y[j][1])+','
-        file.write(row+sensors_row+"\n")
+        file.write(row+str(acceleration[i])+","+sensors_row+"\n")
+        z_file.write(str(z_boat_pos[i])+",\n")
         sensors_file.write(sensors_row+"\n")
         points_file.write(points_row+"\n")
         for k_pos in range(0, num_k):
             amplitude_file.write(str(a[k_pos*8+0])+','+str(a[k_pos*8+1])+','+str(a[k_pos*8+2])+','+str(a[k_pos*8+3])+','
                                 +str(a[k_pos*8+4])+','+str(a[k_pos*8+5])+','+str(a[k_pos*8+6])+','+str(a[k_pos*8+7])+',')
         amplitude_file.write("\n")
+    z_file.close()
     file.close()
     sensors_file.close()
     amplitude_file.close()

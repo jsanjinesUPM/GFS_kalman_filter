@@ -12,9 +12,12 @@
 void write_header(FILE *writefile, double time, int x_size, int y_size){
     //Writing header to CSV file
     fprintf(writefile, "time,");
-    for(int i = 0; i < x_size; i++){
+    for(int i = 0; i < x_size-3; i++){
         fprintf(writefile, "a%d,", i);
     }
+    fprintf(writefile, "z,");
+    fprintf(writefile, "vz,");
+    fprintf(writefile, "az,");
     for(int i = 0; i < y_size; i++){
         fprintf(writefile, "h%d,", i);
         fprintf(writefile, "y%d,", i);
@@ -91,21 +94,31 @@ int get_w(rc_vector_t* w, rc_matrix_t K, double depth){
 }
 
 int get_H(rc_matrix_t* H, rc_matrix_t K, rc_matrix_t X_Y, rc_vector_t w, double time){
-    if(H->cols != K.rows*8){
+    if(H->cols != K.rows*8 + 3){
         return -1;
     }
-    for(int i = 0; i < H->rows; i++){
+    for(int i = 0; i < H->rows-1; i++){
         for(int j = 0; j < K.rows; j++){
-            H->d[i][j*8+0] = sin(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
-            H->d[i][j*8+1] = sin(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
-            H->d[i][j*8+2] = sin(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
-            H->d[i][j*8+3] = sin(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
-            H->d[i][j*8+4] = cos(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
-            H->d[i][j*8+5] = cos(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
-            H->d[i][j*8+6] = cos(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
-            H->d[i][j*8+7] = cos(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
+            H->d[i][j*8+0] = -sin(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
+            H->d[i][j*8+1] = -sin(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
+            H->d[i][j*8+2] = -sin(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
+            H->d[i][j*8+3] = -sin(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
+            H->d[i][j*8+4] = -cos(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
+            H->d[i][j*8+5] = -cos(K.d[j][0]*X_Y.d[i][0])*sin(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
+            H->d[i][j*8+6] = -cos(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*sin(w.d[j]*time);
+            H->d[i][j*8+7] = -cos(K.d[j][0]*X_Y.d[i][0])*cos(K.d[j][1]*X_Y.d[i][1])*cos(w.d[j]*time);
         }
+        H->d[i][(K.rows)*8 + 0] = 1; //Position Column
+        H->d[i][(K.rows)*8 + 1] = 0; //Velocity Column
+        H->d[i][(K.rows)*8 + 2] = 0; //Acceleration Column
     }
+    //Constructing Acceleration Measurement Row 
+    for(int i = 0; i < H->cols-3; i++){
+        H->d[H->rows-1][i] = 0;
+    }
+    H->d[H->rows-1][H->cols-3] = 0;
+    H->d[H->rows-1][H->cols-2] = 0;
+    H->d[H->rows-1][H->cols-1] = 1;
     return 0;
 }
 

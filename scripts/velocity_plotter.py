@@ -110,8 +110,10 @@ v_perpendicular = -math.sin(heading)*vx + math.cos(heading)*vy
 
 
 fig, ax = plt.subplots(2,1)
-ax[0].plot(times, v_parallel[:,0], color='green', label='Kalman')
-ax[0].plot(times, v_parallel_sim[:,0], color='red', label='Real')
+# ax[0].plot(times, v_parallel[:,0], color='green', label='Kalman')
+# ax[0].plot(times, v_parallel_sim[:,0], color='red', label='Real')
+ax[0].plot(times, vz[:,0], color='green', label='Kalman')
+ax[0].plot(times, vz_sim[:,0], color='red', label='Real')
 ax[0].legend(loc='best')
 ax[0].set_xlabel('t[s]')
 ax[0].set_ylabel('v[m/s]')

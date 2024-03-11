@@ -14,6 +14,11 @@
 #include <time.h>
 #define MAXCHAR 1024
 //#define eta_analyzer 1
+#ifdef eta_analyzer 
+    #define DELTA_TIME 0.001
+#else
+    #define DELTA_TIME 0.025
+#endif
 
 
 int main(void) {
@@ -25,8 +30,8 @@ int main(void) {
 
     int K_rows = mesh_size(meshfile_path);
     int Num_x_y = 4;
-    int y_size = Num_x_y;
-    int x_size = K_rows*8;
+    int y_size = Num_x_y + 1;   //Extra slot for vertical acceleration
+    int x_size = K_rows*8 + 3;    //3 extra slots for vertical position, velocity and acceleration
 
     //Result will be written to a file
     FILE *writefile;
@@ -79,14 +84,22 @@ int main(void) {
     rc_vector_zeros(&x_0, x_size);
 
     rc_matrix_identity(&F, F.cols);
+    F.d[F.rows-3][F.cols-2] = DELTA_TIME;
+    F.d[F.rows-3][F.cols-1] = DELTA_TIME*DELTA_TIME;
+    F.d[F.rows-2][F.cols-1] = DELTA_TIME;
+
     rc_matrix_identity(&Pi, Pi.cols);
     
 
     rc_matrix_identity(&R, R.cols);
     rc_matrix_times_scalar(&R, pow(0.02, 2));
+    R.d[R.rows-1][R.cols-1] = pow(0.02, 2);    //Acceleration Noise
 
     rc_matrix_identity(&Q, Q.cols);
     rc_matrix_times_scalar(&Q, 0.025/10);
+    // Q.d[Q.rows-3][Q.cols-3] = 0.01;
+    // Q.d[Q.rows-2][Q.cols-2] = 0.005;
+    // Q.d[Q.rows-1][Q.cols-1] = 0.002;
 
     load_mesh(&K, meshfile_path);
 
@@ -143,39 +156,35 @@ int main(void) {
             {   
                 if(i == y.len) break;
                 y.d[i] = strtod(token,NULL);
-                //y.d[i] += rc_random_normal()*sqrt(R.d[i][i]);
+                y.d[i] += rc_random_normal()*sqrt(R.d[i][i]);
                 token = strtok(NULL, ",");
                 i++;
             }
             i = 0;
             while(token != NULL)
             {   
-                if(i == y.len) break;
+                if(i == y.len-1) break;
                 X_Y.d[i][0] = strtod(token,NULL);
                 token = strtok(NULL, ",");
                 X_Y.d[i][1] = strtod(token,NULL);
                 token = strtok(NULL, ",");
                 i++;
             }
+            clock_t begin_update = clock();
             get_H(&H, K, X_Y, w, time);
             rc_matrix_times_col_vec(H, kfilter.x_pre, &h);
-            clock_t begin_update = clock();
             if(rc_kalman_prediction_update_ekf(&kfilter, H, y, h) == -1) return -1;
             clock_t end_update = clock();
             double time_predict = (double)(end_predict - begin_predict) / CLOCKS_PER_SEC;
             double time_update = (double)(end_update - begin_update)/ CLOCKS_PER_SEC;
-        // printf("Time per iteration predict: %lf \n", time_predict);
-        // printf("Time per iteration update: %lf \n \n", time_update);
+        printf("Time per iteration predict: %lf \n", time_predict);
+        printf("Time per iteration update: %lf \n \n", time_update);
         #ifdef eta_analyzer
         }
         #endif
         //Writing to file
         write_to_file(writefile, time, kfilter.x_pre, h, y);
-        #ifdef eta_analyzer
-        time += 0.001;
-        #else
-        time += 0.025;
-        #endif
+        time += DELTA_TIME;
     }
     #ifdef eta_analyzer
     for(int extra = 0; extra < 10000; extra ++){
